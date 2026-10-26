@@ -1,0 +1,15 @@
+name: GreenLogin
+version: 1.0.0
+main: me.greenlogin.GreenLogin
+api-version: '26.1'
+commands:
+  gir:
+    description: Login
+    usage: /gir <şifre>
+  kayit:
+    description: Register
+    usage: /kayit <şifre> <şifre>
+permissions:
+  greenlogin.admin:
+    default: op
+    
