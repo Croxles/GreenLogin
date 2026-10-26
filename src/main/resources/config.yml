@@ -1,3 +1,12 @@
+name: GreenLogin
+version: 1.0.0
+main: me.greenlogin.GreenLogin
+api-version: '1.21'
 
-max-attempts: 3
-users: {}
+commands:
+  gir:
+    description: Giris yap
+  kayit:
+    description: Kayit ol
+  sifredeyisdir:
+    description: Sifre degistir
