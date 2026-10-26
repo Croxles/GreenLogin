@@ -1,6 +1,5 @@
 package me.greenlogin;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -25,7 +24,6 @@ import javax.crypto.spec.PBEKeySpec;
 import java.security.SecureRandom;
 import java.security.MessageDigest;
 import java.util.Base64;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -39,13 +37,6 @@ public final class GreenLogin extends JavaPlugin implements Listener {
     private final Map<UUID, Location> positions = new HashMap<>();
     private final SecureRandom random = new SecureRandom();
 
-    @Override
-    public void onEnable() {
-        saveDefaultConfig();
-        getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("GreenLogin aktif!");
-    }
-
     private String color(String text) {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
@@ -53,6 +44,13 @@ public final class GreenLogin extends JavaPlugin implements Listener {
     private boolean allowed(Player p) {
         return logged.contains(p.getUniqueId())
                 || p.hasPermission("greenlogin.admin");
+    }
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("GreenLogin aktif!");
     }
 
     @EventHandler
@@ -64,18 +62,17 @@ public final class GreenLogin extends JavaPlugin implements Listener {
         attempts.put(id, 0);
         positions.put(id, p.getLocation().clone());
 
+        p.sendMessage(color("&a&lGREEN LOGIN"));
         p.sendTitle(
-                color("&a&lGİRİŞ YAP"),
-                color("&e/gir <şifre> komutunu kullan"),
-                5, 60, 10
+                color("&a&lGREEN LOGIN"),
+                color("&eKayit ol veya giris yap!"),
+                10, 100, 10
         );
 
-        p.sendMessage(color("&a&lLOGIN &8» &e/gir <şifre>"));
-
-        if (!getConfig().contains("users." + id)) {
-            p.sendMessage(color(
-                    "&aİlk giriş: /kayit <şifre> <şifre>"
-            ));
+        if (getConfig().contains("users." + id)) {
+            p.sendMessage(color("&eGiris icin: &a/gir <sifre>"));
+        } else {
+            p.sendMessage(color("&eKayit icin: &a/kayit <sifre> <sifre>"));
         }
     }
 
@@ -135,7 +132,7 @@ public final class GreenLogin extends JavaPlugin implements Listener {
             String label, String[] args) {
 
         if (!(sender instanceof Player p)) {
-            sender.sendMessage("Bu komut oyuncular içindir.");
+            sender.sendMessage("Bu komut oyuncular icindir.");
             return true;
         }
 
@@ -143,63 +140,64 @@ public final class GreenLogin extends JavaPlugin implements Listener {
         String cmd = command.getName().toLowerCase();
 
         if (cmd.equals("kayit")) {
+            if (allowed(p)) {
+                p.sendMessage(color("&aZaten giris yaptin."));
+                return true;
+            }
+
             if (getConfig().contains("users." + id)) {
-                p.sendMessage(color("&cZaten kayıtlısın!"));
+                p.sendMessage(color("&cZaten kayitli. /gir <sifre>"));
                 return true;
             }
 
             if (args.length != 2) {
-                p.sendMessage(color(
-                        "&e/kayit <şifre> <şifre>"
-                ));
+                p.sendMessage(color("&e/kayit <sifre> <sifre>"));
                 return true;
             }
 
             if (args[0].length() < 6) {
-                p.sendMessage(color(
-                        "&cŞifre en az 6 karakter olmalı!"
-                ));
+                p.sendMessage(color("&cSifre en az 6 karakter olmali!"));
                 return true;
             }
 
             if (!args[0].equals(args[1])) {
-                p.sendMessage(color("&cŞifreler aynı değil!"));
+                p.sendMessage(color("&cSifreler ayni degil!"));
                 return true;
             }
 
             try {
                 savePassword(id, args[0]);
                 logged.add(id);
+                attempts.remove(id);
+
                 p.sendTitle(
-                        color("&a&lKAYIT BAŞARILI"),
-                        color("&aHoş geldin!"),
+                        color("&a&lKAYIT BASARILI"),
+                        color("&aHos geldin!"),
                         5, 50, 10
                 );
-                p.sendMessage(color("&aKayıt tamamlandı!"));
+                p.sendMessage(color("&aKayit tamamlandi!"));
             } catch (Exception ex) {
-                p.sendMessage(color("&cKayıt yapılamadı."));
-                getLogger().severe("Şifre kaydedilemedi.");
+                p.sendMessage(color("&cKayit yapilamadi."));
+                getLogger().severe("Sifre kaydedilemedi: " + ex.getMessage());
             }
             return true;
         }
 
         if (cmd.equals("gir")) {
             if (allowed(p)) {
-                p.sendMessage(color("&aZaten giriş yaptın."));
+                p.sendMessage(color("&aZaten giris yaptin."));
                 return true;
             }
 
             if (args.length != 1) {
-                p.sendMessage(color("&e/gir <şifre>"));
+                p.sendMessage(color("&e/gir <sifre>"));
                 return true;
             }
 
             String stored = getConfig().getString("users." + id);
 
             if (stored == null) {
-                p.sendMessage(color(
-                        "&cÖnce /kayit <şifre> <şifre> yaz!"
-                ));
+                p.sendMessage(color("&cOnce /kayit <sifre> <sifre> yaz!"));
                 return true;
             }
 
@@ -207,35 +205,28 @@ public final class GreenLogin extends JavaPlugin implements Listener {
                 if (checkPassword(args[0], stored)) {
                     logged.add(id);
                     attempts.remove(id);
+
                     p.sendTitle(
-                            color("&a&lGİRİŞ BAŞARILI"),
-                            color("&aOyuna hoş geldin!"),
+                            color("&a&lGIRIS BASARILI"),
+                            color("&aOyuna hos geldin!"),
                             5, 50, 10
                     );
-                    p.sendMessage(color("&aGiriş başarılı!"));
+                    p.sendMessage(color("&aGiris basarili!"));
                 } else {
                     int used = attempts.merge(id, 1, Integer::sum);
                     int left = 3 - used;
 
                     if (left <= 0) {
-                        p.kickPlayer(color(
-                                "&c3 yanlış deneme yaptın!"
-                        ));
+                        p.kickPlayer(color("&c3 yanlis deneme yaptin!"));
                     } else {
-                        p.sendTitle(
-                                color("&a&l" + left
-                                        + " deneme hakkınız kaldı."),
-                                color("&e/gir şifre komutunu kullan"),
-                                0, 50, 10
-                        );
                         p.sendMessage(color(
-                                "&cYanlış şifre! &aKalan hak: " + left
+                                "&cYanlis sifre! &eKalan hak: " + left
                         ));
                     }
                 }
             } catch (Exception ex) {
-                p.sendMessage(color("&cGiriş işlemi başarısız."));
-                getLogger().warning("Şifre doğrulanamadı.");
+                p.sendMessage(color("&cGiris islemi basarisiz."));
+                getLogger().warning("Sifre dogrulanamadi: " + ex.getMessage());
             }
             return true;
         }
@@ -249,9 +240,9 @@ public final class GreenLogin extends JavaPlugin implements Listener {
         if (allowed(p) || e.getTo() == null) return;
 
         if (e.getFrom().getX() != e.getTo().getX()
+                || e.getFrom().getY() != e.getTo().getY()
                 || e.getFrom().getZ() != e.getTo().getZ()) {
-            Location loc = positions.get(p.getUniqueId());
-            if (loc != null) e.setTo(loc);
+            e.setTo(e.getFrom());
         }
     }
 
@@ -260,20 +251,21 @@ public final class GreenLogin extends JavaPlugin implements Listener {
         Player p = e.getPlayer();
         if (allowed(p)) return;
 
-        String msg = e.getMessage().toLowerCase();
+        String msg = e.getMessage().toLowerCase().trim();
 
-        if (msg.equals("/gir") || msg.startsWith("/gir ")
-                || msg.equals("/kayit") || msg.startsWith("/kayit ")) {
+        if (msg.matches("^/(gir|kayit)(\\s+.*)?$")) {
             return;
         }
 
         e.setCancelled(true);
-        p.sendMessage(color("&cÖnce giriş yapmalısın!"));
+        p.sendMessage(color("&cOnce /gir veya /kayit kullanmalisin!"));
     }
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent e) {
-        if (!allowed(e.getPlayer())) e.setCancelled(true);
+        if (!allowed(e.getPlayer())) {
+            e.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -304,5 +296,5 @@ public final class GreenLogin extends JavaPlugin implements Listener {
             e.setCancelled(true);
         }
     }
-          }
-          
+    }
+                                                              
